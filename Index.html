@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LexCrab</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: row;
+    }
+
+    #editor {
+        width: 65%;
+        padding: 16px;
+        border-right: 1px solid #ccc;
+        overflow-y: auto;
+    }
+
+    #sidebar {
+        width: 35%;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    #translation-panel,
+    #dictionary-panel {
+        padding: 16px;
+        background: #f9f9f9;
+    }
+
+    #dictionary-panel {
+        border-top: 1px solid #ccc;
+    }
+
+    textarea {
+        width: 100%;
+        height: 120px;
+        box-sizing: border-box;
+        font-size: 16px;
+    }
+
+    button {
+        padding: 10px 12px;
+        margin-top: 6px;
+        margin-right: 6px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        font-size: 16px;
+    }
+
+    .text-block {
+        margin-bottom: 16px;
+        padding: 12px;
+        border-radius: 6px;
+        background: #f4f4f4;
+        line-height: 1.6;
+        font-size: 16px;
+    }
+
+    .word {
+        cursor: pointer;
+        padding: 4px 6px;
+        margin: 1px;
+        display: inline-block;
+        border-radius: 4px;
+    }
+
+    .highlight { background: yellow; }
+    .translated { background: #c8f7c5; }
+
+    /* tooltip only for desktop */
+    @media (hover: hover) {
+        .word {
+            position: relative;
+        }
+
+        .word::after {
+            content: attr(data-translation);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+        }
+
+        .word:hover::after {
+            opacity: 1;
+        }
+    }
+
+    a {
+        word-break: break-all;
+    }
+
+    /* 📱 MOBILE */
+    @media (max-width: 768px) {
+        body {
+            flex-direction: column;
+        }
+
+        #editor {
+            width: 100%;
+            height: 60vh;
+            border-right: none;
+            border-bottom: 1px solid #ccc;
+        }
+
+        #sidebar {
+            width: 100%;
+            height: 40vh;
+        }
+
+        #translation-panel,
+        #dictionary-panel {
+            display: none;
+        }
+
+        #sidebar.show-translation #translation-panel {
+            display: block;
+        }
+
+        #sidebar.show-dictionary #dictionary-panel {
+            display: block;
+        }
+
+        #panel-switch {
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #ccc;
+            background: #eee;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div id="editor">
+    <h3>Вставь текст</h3>
+    <textarea id="inputText"></textarea>
+
+    <button onclick="addText()">Добавить блок</button>
+    <button onclick="exportJSON()">Выгрузить JSON</button>
+    <input type="file" accept=".json" onchange="importJSON(event)">
+
+    <hr>
+    <div id="textContainer"></div>
+</div>
+
+<div id="sidebar" class="show-translation">
+
+    <div id="panel-switch">
+        <button onclick="showTranslation()">Перевод</button>
+        <button onclick="showDictionary()">Словарь</button>
+    </div>
+
+    <div id="translation-panel">
+        <h3>Слово</h3>
+        <div id="selectedWord"><i>кликни по слову</i></div>
+        <input id="translationInput" placeholder="Твой перевод">
+        <button onclick="saveTranslation()">Сохранить</button>
+    </div>
+
+    <div id="dictionary-panel">
+        <h3>Cambridge</h3>
+        <a id="dictionaryLink" target="_blank">Выбери слово</a>
+    </div>
+</div>
+
+<script>
+const textContainer = document.getElementById("textContainer");
+const selectedWordDiv = document.getElementById("selectedWord");
+const translationInput = document.getElementById("translationInput");
+const dictionaryLink = document.getElementById("dictionaryLink");
+const sidebar = document.getElementById("sidebar");
+
+let selectedWord = null;
+let texts = JSON.parse(localStorage.getItem("texts") || "[]");
+let translations = JSON.parse(localStorage.getItem("translations") || "{}");
+
+function normalize(w) { return w.toLowerCase(); }
+
+function renderBlock(text) {
+    const block = document.createElement("div");
+    block.className = "text-block";
+
+    text.split(/(\s+|[,.!?])/).forEach(p => {
+        if (/\s+|[,.!?]/.test(p)) {
+            block.appendChild(document.createTextNode(p));
+        } else {
+            const key = normalize(p);
+            const span = document.createElement("span");
+            span.textContent = p;
+            span.className = "word";
+            span.dataset.word = key;
+
+            if (translations[key]) {
+                span.classList.add("translated");
+                span.dataset.translation = translations[key];
+            }
+
+            span.onclick = () => selectWord(key);
+            block.appendChild(span);
+        }
+    });
+
+    textContainer.appendChild(block);
+}
+
+function addText() {
+    const text = inputText.value.trim();
+    if (!text) return;
+    inputText.value = "";
+    texts.push(text);
+    localStorage.setItem("texts", JSON.stringify(texts));
+    renderBlock(text);
+}
+
+function selectWord(word) {
+    selectedWord = word;
+    selectedWordDiv.textContent = word;
+    translationInput.value = translations[word] || "";
+
+    document.querySelectorAll(".word")
+        .forEach(w => w.classList.toggle("highlight", w.dataset.word === word));
+
+    const url = "https://dictionary.cambridge.org/ru/словарь/английский/" + encodeURIComponent(word);
+    dictionaryLink.href = url;
+    dictionaryLink.textContent = url;
+
+    showTranslation();
+}
+
+function saveTranslation() {
+    if (!selectedWord) return;
+    translations[selectedWord] = translationInput.value;
+    localStorage.setItem("translations", JSON.stringify(translations));
+
+    document.querySelectorAll(".word").forEach(w => {
+        if (w.dataset.word === selectedWord) {
+            w.classList.add("translated");
+            w.dataset.translation = translations[selectedWord];
+        }
+    });
+}
+
+function exportJSON() {
+    const blob = new Blob(
+        [JSON.stringify({ texts, translations }, null, 2)],
+        { type: "application/json" }
+    );
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "lexcrab_backup.json";
+    a.click();
+}
+
+function importJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        const data = JSON.parse(e.target.result);
+        texts = data.texts || [];
+        translations = data.translations || {};
+        localStorage.setItem("texts", JSON.stringify(texts));
+        localStorage.setItem("translations", JSON.stringify(translations));
+        textContainer.innerHTML = "";
+        texts.forEach(renderBlock);
+    };
+    reader.readAsText(file);
+}
+
+function showTranslation() {
+    sidebar.className = "show-translation";
+}
+
+function showDictionary() {
+    sidebar.className = "show-dictionary";
+}
+
+texts.forEach(renderBlock);
+</script>
+
+</body>
+</html>
