@@ -56,17 +56,22 @@
         .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
         h1 { font-size: 1.6rem; margin: 0; color: var(--accent); font-weight: 800; letter-spacing: -1px; }
 
-        .card { background: var(--bg-card); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); transition: transform 0.2s; position: relative; }
-        .text-block:hover .delete-btn { opacity: 1; }
-
+        .card { background: var(--bg-card); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; }
+        
         textarea { width: 100%; height: 110px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: var(--text-primary); font-size: 1rem; resize: none; outline: none; transition: border-color 0.2s; }
         textarea:focus { border-color: var(--accent); }
 
-        button { padding: 12px 24px; border-radius: 10px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
-        button:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(244, 102, 35, 0.2); }
+        /* --- Кнопки и Сетка --- */
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        button { padding: 12px 20px; border-radius: 10px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; justify-content: center; }
+        button:hover { background: var(--accent-hover); transform: translateY(-1px); }
         button.secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
+        
+        .btn-main { flex: 2 !important; }
+        .btn-side { flex: 1; }
 
         .delete-btn { position: absolute; top: 12px; right: 12px; background: transparent; color: var(--text-secondary); padding: 5px; opacity: 0; transition: opacity 0.2s; }
+        .text-block:hover .delete-btn { opacity: 1; }
         .delete-btn:hover { color: #ff4d4d; background: #fff1f1; }
 
         .close-sidebar-btn { display: none; background: var(--bg-main); color: var(--text-primary); padding: 8px; border-radius: 50%; width: 36px; height: 36px; justify-content: center; align-items: center; position: absolute; right: 16px; top: 16px; border: 1px solid var(--border); font-size: 18px; z-index: 1001; }
@@ -91,11 +96,20 @@
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
-        /* --- Sidebar Panels --- */
+        /* --- Sidebar & GitHub Link --- */
         .panel-content { padding: 2rem; flex: 1; }
-        .panel-nav { display: flex; padding: 12px; background: var(--bg-card); border-bottom: 1px solid var(--border); gap: 8px; padding-top: 50px; } /* Отступ сверху для кнопки закрытия */
+        .panel-nav { display: flex; padding: 12px; background: var(--bg-card); border-bottom: 1px solid var(--border); gap: 8px; padding-top: 50px; }
         .panel-nav button { flex: 1; background: transparent; color: var(--text-secondary); padding: 8px; }
         .panel-nav button.active { background: var(--bg-main); color: var(--accent); }
+
+        .sidebar-footer { padding: 1.5rem; border-top: 1px solid var(--border); }
+        .github-link {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 12px; border-radius: 12px; background: var(--word-bg);
+            color: var(--text-primary); text-decoration: none; font-weight: 500;
+            font-size: 0.9rem; transition: all 0.2s;
+        }
+        .github-link:hover { background: var(--border); transform: scale(1.02); }
 
         #selectedWordDisplay { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--accent); letter-spacing: -1px; word-break: break-word; }
         .dictionary-frame { width: 100%; text-decoration: none; color: var(--accent); font-weight: 600; display: flex; align-items: center; gap: 8px; margin-top: 1rem; padding: 1rem; border: 1px dashed var(--accent); border-radius: 12px; }
@@ -104,7 +118,7 @@
         @media (max-width: 768px) {
             #editor.blur { filter: blur(2px); pointer-events: none; }
             #sidebar { 
-                position: fixed; bottom: 0; left: 0; width: 100%; height: 60vh; 
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 70vh; 
                 transform: translateY(100%); border-radius: 24px 24px 0 0; border-left: none;
                 transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
@@ -114,7 +128,9 @@
             .delete-btn { opacity: 1; }
             .panel-nav { padding-top: 60px; }
             
-            /* Overlay эффект */
+            .btn-group { display: grid; grid-template-columns: 1fr 1fr; }
+            .btn-main { grid-column: span 2; }
+
             body::after {
                 content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 background: rgba(0,0,0,0.4); z-index: 999; opacity: 0; pointer-events: none;
@@ -135,9 +151,9 @@
     <div class="card" onclick="event.stopPropagation()">
         <textarea id="inputText" placeholder="Вставьте текст или техническую документацию..."></textarea>
         <div class="btn-group">
-            <button onclick="addText()">Добавить текст</button>
-            <button class="secondary" onclick="exportJSON()">Экспорт</button>
-            <button class="secondary" onclick="document.getElementById('importFile').click()">Импорт</button>
+            <button class="btn-main" onclick="addText()">➕ Добавить текст</button>
+            <button class="secondary btn-side" onclick="exportJSON()">📥 Экспорт</button>
+            <button class="secondary btn-side" onclick="document.getElementById('importFile').click()">📤 Импорт</button>
             <input type="file" id="importFile" hidden onchange="importJSON(event)">
         </div>
     </div>
@@ -167,6 +183,13 @@
         <p style="color: var(--text-secondary); line-height: 1.6;">Изучите контекст и примеры в оригинале.</p>
         <a id="dictionaryLink" target="_blank" class="dictionary-frame">Посмотреть в словаре ↗</a>
     </div>
+
+    <div class="sidebar-footer">
+        <a href="https://github.com/Yolshin195/lexcrab" target="_blank" class="github-link">
+            <svg height="20" viewBox="0 0 16 16" width="20" style="fill: currentColor;"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+            GitHub Repository
+        </a>
+    </div>
 </div>
 
 <script>
@@ -193,8 +216,6 @@
         document.getElementById('sidebar').classList.remove('open');
         document.body.classList.remove('sidebar-open');
         document.getElementById('editor').classList.remove('blur');
-        // Убираем подсветку слова при закрытии, если нужно
-        // document.querySelectorAll(".word").forEach(w => w.classList.remove("highlight"));
     }
 
     function normalize(w) { return w.toLowerCase().replace(/[.,!?;:()]/g, ''); }
@@ -202,7 +223,8 @@
     function renderBlock(text, index) {
         const card = document.createElement("div");
         card.className = "card text-block";
-        card.onclick = (e) => e.stopPropagation(); // Чтобы клик по блоку не закрывал сайдбар сразу
+        card.style.marginBottom = "1rem";
+        card.onclick = (e) => e.stopPropagation();
         
         const deleteBtn = document.createElement("button");
         deleteBtn.className = "delete-btn";
@@ -225,10 +247,7 @@
                     span.dataset.translation = translations[wordKey];
                 }
 
-                span.onclick = (e) => { 
-                    e.stopPropagation(); 
-                    selectWord(wordKey); 
-                };
+                span.onclick = (e) => { e.stopPropagation(); selectWord(wordKey); };
                 card.appendChild(span);
             }
         });
@@ -274,21 +293,11 @@
             delete translations[selectedWord];
         }
         localStorage.setItem("lc_trans", JSON.stringify(translations));
-
-        document.querySelectorAll(`.word[data-word="${selectedWord}"]`).forEach(w => {
-            if (val) {
-                w.classList.add("translated");
-                w.dataset.translation = val;
-            } else {
-                w.classList.remove("translated");
-                w.removeAttribute("data-translation");
-            }
-        });
+        refreshBlocks(); // Обновляем блоки для синхронизации тултипов
         if (window.innerWidth <= 768) closeSidebar();
     }
 
     function updateStorage() { localStorage.setItem("lc_texts", JSON.stringify(texts)); }
-    
     function refreshBlocks() {
         document.getElementById("textContainer").innerHTML = "";
         texts.forEach((t, i) => renderBlock(t, i));
@@ -298,7 +307,7 @@
         const blob = new Blob([JSON.stringify({ texts, translations })], {type: "application/json"});
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `lexcrab_data.json`;
+        a.download = `lexcrab_backup.json`;
         a.click();
     }
 
