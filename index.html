@@ -1,307 +1,321 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LexCrab</title>
-
-<style>
-    body {
-        margin: 0;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        height: 100vh;
-        display: flex;
-        flex-direction: row;
-    }
-
-    #editor {
-        width: 65%;
-        padding: 16px;
-        border-right: 1px solid #ccc;
-        overflow-y: auto;
-    }
-
-    #sidebar {
-        width: 35%;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-    }
-
-    #translation-panel,
-    #dictionary-panel {
-        padding: 16px;
-        background: #f9f9f9;
-    }
-
-    #dictionary-panel {
-        border-top: 1px solid #ccc;
-    }
-
-    textarea {
-        width: 100%;
-        height: 120px;
-        box-sizing: border-box;
-        font-size: 16px;
-    }
-
-    button {
-        padding: 10px 12px;
-        margin-top: 6px;
-        margin-right: 6px;
-        font-size: 16px;
-        cursor: pointer;
-    }
-
-    input {
-        width: 100%;
-        padding: 10px;
-        margin: 8px 0;
-        font-size: 16px;
-    }
-
-    .text-block {
-        margin-bottom: 16px;
-        padding: 12px;
-        border-radius: 6px;
-        background: #f4f4f4;
-        line-height: 1.6;
-        font-size: 16px;
-    }
-
-    .word {
-        cursor: pointer;
-        padding: 4px 6px;
-        margin: 1px;
-        display: inline-block;
-        border-radius: 4px;
-    }
-
-    .highlight { background: yellow; }
-    .translated { background: #c8f7c5; }
-
-    /* tooltip only for desktop */
-    @media (hover: hover) {
-        .word {
-            position: relative;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LexCrab — Smart Reading</title>
+    <style>
+        :root {
+            --bg-main: #f8f9fa;
+            --bg-card: #ffffff;
+            --bg-sidebar: #ffffff;
+            --accent: #f46623;
+            --accent-hover: #d5531a;
+            --text-primary: #1a1a1b;
+            --text-secondary: #65676b;
+            --border: #e4e6eb;
+            --word-bg: #f0f2f5;
+            --word-translated: #fff0e6;
+            --shadow: 0 2px 10px rgba(0,0,0,0.06);
+            --rust-black: #282c34;
+            --overlay: rgba(0,0,0,0);
         }
 
-        .word::after {
-            content: attr(data-translation);
-            position: absolute;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.15s;
-            white-space: nowrap;
+        [data-theme="dark"] {
+            --bg-main: #121212;
+            --bg-card: #1e1e1e;
+            --bg-sidebar: #1e1e1e;
+            --accent: #f46623;
+            --accent-hover: #ff7e42;
+            --text-primary: #e4e6eb;
+            --text-secondary: #b0b3b8;
+            --border: #3a3b3c;
+            --word-bg: #3a3b3c;
+            --word-translated: #3d2b22;
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
 
-        .word:hover::after {
-            opacity: 1;
-        }
-    }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    a {
-        word-break: break-all;
-    }
-
-    /* 📱 MOBILE */
-    @media (max-width: 768px) {
         body {
-            flex-direction: column;
-        }
-
-        #editor {
-            width: 100%;
-            height: 60vh;
-            border-right: none;
-            border-bottom: 1px solid #ccc;
-        }
-
-        #sidebar {
-            width: 100%;
-            height: 40vh;
-        }
-
-        #translation-panel,
-        #dictionary-panel {
-            display: none;
-        }
-
-        #sidebar.show-translation #translation-panel {
-            display: block;
-        }
-
-        #sidebar.show-dictionary #dictionary-panel {
-            display: block;
-        }
-
-        #panel-switch {
+            margin: 0;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            height: 100vh;
             display: flex;
-            gap: 8px;
-            padding: 8px;
-            border-bottom: 1px solid #ccc;
-            background: #eee;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            transition: background 0.3s;
+            overflow: hidden;
         }
-    }
-</style>
+
+        /* --- Layout --- */
+        #editor { flex: 1; padding: 2rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; transition: filter 0.3s; }
+        #sidebar { width: 380px; background: var(--bg-sidebar); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 1000; box-shadow: -4px 0 15px rgba(0,0,0,0.03); }
+
+        /* --- Components --- */
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        h1 { font-size: 1.6rem; margin: 0; color: var(--accent); font-weight: 800; letter-spacing: -1px; }
+
+        .card { background: var(--bg-card); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); transition: transform 0.2s; position: relative; }
+        .text-block:hover .delete-btn { opacity: 1; }
+
+        textarea { width: 100%; height: 110px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: var(--text-primary); font-size: 1rem; resize: none; outline: none; transition: border-color 0.2s; }
+        textarea:focus { border-color: var(--accent); }
+
+        button { padding: 12px 24px; border-radius: 10px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+        button:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(244, 102, 35, 0.2); }
+        button.secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
+
+        .delete-btn { position: absolute; top: 12px; right: 12px; background: transparent; color: var(--text-secondary); padding: 5px; opacity: 0; transition: opacity 0.2s; }
+        .delete-btn:hover { color: #ff4d4d; background: #fff1f1; }
+
+        .close-sidebar-btn { display: none; background: var(--bg-main); color: var(--text-primary); padding: 8px; border-radius: 50%; width: 36px; height: 36px; justify-content: center; align-items: center; position: absolute; right: 16px; top: 16px; border: 1px solid var(--border); font-size: 18px; z-index: 1001; }
+
+        /* --- Word Styles --- */
+        .text-block { line-height: 1.9; font-size: 1.1rem; }
+        .word { cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: all 0.2s; border-bottom: 2px solid transparent; position: relative; }
+        .word:hover { background: var(--word-bg); }
+        .word.highlight { background: var(--accent) !important; color: white !important; border-radius: 6px; }
+        .word.translated { border-bottom-color: var(--accent); background: var(--word-translated); }
+
+        /* Tooltip */
+        @media (hover: hover) {
+            .word[data-translation]:not(.highlight):hover::after {
+                content: attr(data-translation);
+                position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+                background: var(--rust-black); color: white;
+                padding: 6px 12px; border-radius: 8px; font-size: 0.85rem;
+                white-space: nowrap; z-index: 1000; box-shadow: var(--shadow);
+                animation: fadeIn 0.15s ease-out;
+            }
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+        /* --- Sidebar Panels --- */
+        .panel-content { padding: 2rem; flex: 1; }
+        .panel-nav { display: flex; padding: 12px; background: var(--bg-card); border-bottom: 1px solid var(--border); gap: 8px; padding-top: 50px; } /* Отступ сверху для кнопки закрытия */
+        .panel-nav button { flex: 1; background: transparent; color: var(--text-secondary); padding: 8px; }
+        .panel-nav button.active { background: var(--bg-main); color: var(--accent); }
+
+        #selectedWordDisplay { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--accent); letter-spacing: -1px; word-break: break-word; }
+        .dictionary-frame { width: 100%; text-decoration: none; color: var(--accent); font-weight: 600; display: flex; align-items: center; gap: 8px; margin-top: 1rem; padding: 1rem; border: 1px dashed var(--accent); border-radius: 12px; }
+
+        /* --- Mobile UX --- */
+        @media (max-width: 768px) {
+            #editor.blur { filter: blur(2px); pointer-events: none; }
+            #sidebar { 
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 60vh; 
+                transform: translateY(100%); border-radius: 24px 24px 0 0; border-left: none;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            #sidebar.open { transform: translateY(0); box-shadow: 0 -10px 30px rgba(0,0,0,0.15); }
+            .mobile-handle { width: 40px; height: 5px; background: var(--border); border-radius: 10px; margin: 12px auto; position: absolute; top: 0; left: 50%; transform: translateX(-50%); }
+            .close-sidebar-btn { display: flex; }
+            .delete-btn { opacity: 1; }
+            .panel-nav { padding-top: 60px; }
+            
+            /* Overlay эффект */
+            body::after {
+                content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.4); z-index: 999; opacity: 0; pointer-events: none;
+                transition: opacity 0.3s;
+            }
+            body.sidebar-open::after { opacity: 1; pointer-events: auto; }
+        }
+    </style>
 </head>
-<body>
+<body data-theme="light">
 
-<div id="editor">
-    <h3>Вставь текст</h3>
-    <textarea id="inputText"></textarea>
+<div id="editor" onclick="closeSidebar()">
+    <div class="header-row">
+        <h1>LexCrab<span style="color:var(--text-primary)">.</span></h1>
+        <button class="secondary theme-toggle" onclick="event.stopPropagation(); toggleTheme()" style="padding: 10px;">🌓</button>
+    </div>
 
-    <button onclick="addText()">Добавить блок</button>
-    <button onclick="exportJSON()">Выгрузить JSON</button>
-    <input type="file" accept=".json" onchange="importJSON(event)">
+    <div class="card" onclick="event.stopPropagation()">
+        <textarea id="inputText" placeholder="Вставьте текст или техническую документацию..."></textarea>
+        <div class="btn-group">
+            <button onclick="addText()">Добавить текст</button>
+            <button class="secondary" onclick="exportJSON()">Экспорт</button>
+            <button class="secondary" onclick="document.getElementById('importFile').click()">Импорт</button>
+            <input type="file" id="importFile" hidden onchange="importJSON(event)">
+        </div>
+    </div>
 
-    <hr>
     <div id="textContainer"></div>
 </div>
 
-<div id="sidebar" class="show-translation">
-
-    <div id="panel-switch">
-        <button onclick="showTranslation()">Перевод</button>
-        <button onclick="showDictionary()">Словарь</button>
+<div id="sidebar">
+    <div class="mobile-handle"></div>
+    <button class="close-sidebar-btn" onclick="closeSidebar()">✕</button>
+    
+    <div class="panel-nav">
+        <button id="nav-trans" class="active" onclick="switchTab('trans')">Перевод</button>
+        <button id="nav-dict" onclick="switchTab('dict')">Словарь</button>
     </div>
 
-    <div id="translation-panel">
-        <h3>Слово</h3>
-        <div id="selectedWord"><i>кликни по слову</i></div>
-        <input id="translationInput" placeholder="Твой перевод">
-        <button onclick="saveTranslation()">Сохранить</button>
+    <div id="trans-panel" class="panel-content">
+        <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 1px; margin-bottom: 4px;">Selected Word</div>
+        <div id="selectedWordDisplay">...</div>
+        <input type="text" id="translationInput" placeholder="Введите перевод..." 
+               style="width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); margin-bottom: 1.5rem; font-size: 1rem; outline: none;">
+        <button onclick="saveTranslation()" style="width: 100%; justify-content: center;">Сохранить изменения</button>
     </div>
 
-    <div id="dictionary-panel">
-        <h3>Cambridge</h3>
-        <a id="dictionaryLink" target="_blank">Выбери слово</a>
+    <div id="dict-panel" class="panel-content" style="display:none">
+        <h3>Cambridge English</h3>
+        <p style="color: var(--text-secondary); line-height: 1.6;">Изучите контекст и примеры в оригинале.</p>
+        <a id="dictionaryLink" target="_blank" class="dictionary-frame">Посмотреть в словаре ↗</a>
     </div>
 </div>
 
 <script>
-const textContainer = document.getElementById("textContainer");
-const selectedWordDiv = document.getElementById("selectedWord");
-const translationInput = document.getElementById("translationInput");
-const dictionaryLink = document.getElementById("dictionaryLink");
-const sidebar = document.getElementById("sidebar");
+    let texts = JSON.parse(localStorage.getItem("lc_texts") || "[]");
+    let translations = JSON.parse(localStorage.getItem("lc_trans") || "{}");
+    let selectedWord = null;
 
-let selectedWord = null;
-let texts = JSON.parse(localStorage.getItem("texts") || "[]");
-let translations = JSON.parse(localStorage.getItem("translations") || "{}");
+    function toggleTheme() {
+        const body = document.body;
+        const newTheme = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('lc_theme', newTheme);
+    }
+    if (localStorage.getItem('lc_theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
 
-function normalize(w) { return w.toLowerCase(); }
+    function switchTab(tab) {
+        document.getElementById('trans-panel').style.display = tab === 'trans' ? 'block' : 'none';
+        document.getElementById('dict-panel').style.display = tab === 'dict' ? 'block' : 'none';
+        document.getElementById('nav-trans').classList.toggle('active', tab === 'trans');
+        document.getElementById('nav-dict').classList.toggle('active', tab === 'dict');
+    }
 
-function renderBlock(text) {
-    const block = document.createElement("div");
-    block.className = "text-block";
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.body.classList.remove('sidebar-open');
+        document.getElementById('editor').classList.remove('blur');
+        // Убираем подсветку слова при закрытии, если нужно
+        // document.querySelectorAll(".word").forEach(w => w.classList.remove("highlight"));
+    }
 
-    text.split(/(\s+|[,.!?])/).forEach(p => {
-        if (/\s+|[,.!?]/.test(p)) {
-            block.appendChild(document.createTextNode(p));
-        } else {
-            const key = normalize(p);
-            const span = document.createElement("span");
-            span.textContent = p;
-            span.className = "word";
-            span.dataset.word = key;
+    function normalize(w) { return w.toLowerCase().replace(/[.,!?;:()]/g, ''); }
 
-            if (translations[key]) {
-                span.classList.add("translated");
-                span.dataset.translation = translations[key];
+    function renderBlock(text, index) {
+        const card = document.createElement("div");
+        card.className = "card text-block";
+        card.onclick = (e) => e.stopPropagation(); // Чтобы клик по блоку не закрывал сайдбар сразу
+        
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.innerHTML = "🗑️";
+        deleteBtn.onclick = (e) => { e.stopPropagation(); deleteBlock(index); };
+        card.appendChild(deleteBtn);
+
+        text.split(/(\s+)/).forEach(p => {
+            if (/\s+/.test(p)) {
+                card.appendChild(document.createTextNode(p));
+            } else {
+                const wordKey = normalize(p);
+                const span = document.createElement("span");
+                span.textContent = p;
+                span.className = "word";
+                span.dataset.word = wordKey;
+
+                if (translations[wordKey]) {
+                    span.classList.add("translated");
+                    span.dataset.translation = translations[wordKey];
+                }
+
+                span.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    selectWord(wordKey); 
+                };
+                card.appendChild(span);
             }
+        });
+        document.getElementById("textContainer").prepend(card);
+    }
 
-            span.onclick = () => selectWord(key);
-            block.appendChild(span);
+    function addText() {
+        const val = document.getElementById("inputText").value.trim();
+        if (!val) return;
+        texts.push(val);
+        updateStorage();
+        refreshBlocks();
+        document.getElementById("inputText").value = "";
+    }
+
+    function deleteBlock(index) {
+        texts.splice(index, 1);
+        updateStorage();
+        refreshBlocks();
+    }
+
+    function selectWord(word) {
+        selectedWord = word;
+        document.getElementById("selectedWordDisplay").textContent = word;
+        document.getElementById("translationInput").value = translations[word] || "";
+        document.getElementById("dictionaryLink").href = `https://dictionary.cambridge.org/dictionary/english/${word}`;
+        
+        document.querySelectorAll(".word").forEach(w => w.classList.toggle("highlight", w.dataset.word === word));
+        
+        if (window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.add('open');
+            document.body.classList.add('sidebar-open');
+            document.getElementById('editor').classList.add('blur');
         }
-    });
+    }
 
-    textContainer.appendChild(block);
-}
-
-function addText() {
-    const text = inputText.value.trim();
-    if (!text) return;
-    inputText.value = "";
-    texts.push(text);
-    localStorage.setItem("texts", JSON.stringify(texts));
-    renderBlock(text);
-}
-
-function selectWord(word) {
-    selectedWord = word;
-    selectedWordDiv.textContent = word;
-    translationInput.value = translations[word] || "";
-
-    document.querySelectorAll(".word")
-        .forEach(w => w.classList.toggle("highlight", w.dataset.word === word));
-
-    const url = "https://dictionary.cambridge.org/ru/словарь/английский/" + encodeURIComponent(word);
-    dictionaryLink.href = url;
-    dictionaryLink.textContent = url;
-
-    showTranslation();
-}
-
-function saveTranslation() {
-    if (!selectedWord) return;
-    translations[selectedWord] = translationInput.value;
-    localStorage.setItem("translations", JSON.stringify(translations));
-
-    document.querySelectorAll(".word").forEach(w => {
-        if (w.dataset.word === selectedWord) {
-            w.classList.add("translated");
-            w.dataset.translation = translations[selectedWord];
+    function saveTranslation() {
+        if (!selectedWord) return;
+        const val = document.getElementById("translationInput").value.trim();
+        if (val) {
+            translations[selectedWord] = val;
+        } else {
+            delete translations[selectedWord];
         }
-    });
-}
+        localStorage.setItem("lc_trans", JSON.stringify(translations));
 
-function exportJSON() {
-    const blob = new Blob(
-        [JSON.stringify({ texts, translations }, null, 2)],
-        { type: "application/json" }
-    );
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "lexcrab_backup.json";
-    a.click();
-}
+        document.querySelectorAll(`.word[data-word="${selectedWord}"]`).forEach(w => {
+            if (val) {
+                w.classList.add("translated");
+                w.dataset.translation = val;
+            } else {
+                w.classList.remove("translated");
+                w.removeAttribute("data-translation");
+            }
+        });
+        if (window.innerWidth <= 768) closeSidebar();
+    }
 
-function importJSON(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    function updateStorage() { localStorage.setItem("lc_texts", JSON.stringify(texts)); }
+    
+    function refreshBlocks() {
+        document.getElementById("textContainer").innerHTML = "";
+        texts.forEach((t, i) => renderBlock(t, i));
+    }
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        const data = JSON.parse(e.target.result);
-        texts = data.texts || [];
-        translations = data.translations || {};
-        localStorage.setItem("texts", JSON.stringify(texts));
-        localStorage.setItem("translations", JSON.stringify(translations));
-        textContainer.innerHTML = "";
-        texts.forEach(renderBlock);
-    };
-    reader.readAsText(file);
-}
+    function exportJSON() {
+        const blob = new Blob([JSON.stringify({ texts, translations })], {type: "application/json"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `lexcrab_data.json`;
+        a.click();
+    }
 
-function showTranslation() {
-    sidebar.className = "show-translation";
-}
+    function importJSON(e) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const data = JSON.parse(event.target.result);
+            texts = data.texts || [];
+            translations = data.translations || {};
+            updateStorage();
+            localStorage.setItem("lc_trans", JSON.stringify(translations));
+            location.reload();
+        };
+        reader.readAsText(e.target.files[0]);
+    }
 
-function showDictionary() {
-    sidebar.className = "show-dictionary";
-}
-
-texts.forEach(renderBlock);
+    refreshBlocks();
 </script>
-
 </body>
 </html>
