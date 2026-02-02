@@ -112,7 +112,8 @@
         .github-link:hover { background: var(--border); transform: scale(1.02); }
 
         #selectedWordDisplay { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--accent); letter-spacing: -1px; word-break: break-word; }
-        .dictionary-frame { width: 100%; text-decoration: none; color: var(--accent); font-weight: 600; display: flex; align-items: center; gap: 8px; margin-top: 1rem; padding: 1rem; border: 1px dashed var(--accent); border-radius: 12px; }
+        .dictionary-frame { width: 100%; text-decoration: none; color: var(--accent); font-weight: 600; display: flex; align-items: center; gap: 8px; margin-top: 1rem; padding: 1rem; border: 1px dashed var(--accent); border-radius: 12px; transition: background 0.2s; }
+        .dictionary-frame:hover { background: var(--word-translated); }
 
         /* --- Mobile UX --- */
         @media (max-width: 768px) {
@@ -179,9 +180,16 @@
     </div>
 
     <div id="dict-panel" class="panel-content" style="display:none">
-        <h3>Cambridge English</h3>
-        <p style="color: var(--text-secondary); line-height: 1.6;">Изучите контекст и примеры в оригинале.</p>
-        <a id="dictionaryLink" target="_blank" class="dictionary-frame">Посмотреть в словаре ↗</a>
+        <h3>Внешние ресурсы</h3>
+        <p style="color: var(--text-secondary); line-height: 1.6;">Изучите слово в контексте или получите быстрый перевод.</p>
+        
+        <a id="dictionaryLink" target="_blank" class="dictionary-frame">
+            <span>Cambridge Dictionary</span> ↗
+        </a>
+        
+        <a id="googleTransLink" target="_blank" class="dictionary-frame" style="border-color: #4285f4; color: #4285f4; margin-top: 12px;">
+            <span>Google Translate</span> ↗
+        </a>
     </div>
 
     <div class="sidebar-footer">
@@ -271,9 +279,14 @@
 
     function selectWord(word) {
         selectedWord = word;
+        const encodedWord = encodeURIComponent(word);
+        
         document.getElementById("selectedWordDisplay").textContent = word;
         document.getElementById("translationInput").value = translations[word] || "";
-        document.getElementById("dictionaryLink").href = `https://dictionary.cambridge.org/dictionary/english/${word}`;
+        
+        // Ссылки на внешние ресурсы
+        document.getElementById("dictionaryLink").href = `https://dictionary.cambridge.org/dictionary/english/${encodedWord}`;
+        document.getElementById("googleTransLink").href = `https://translate.google.com/?sl=auto&tl=ru&text=${encodedWord}&op=translate`;
         
         document.querySelectorAll(".word").forEach(w => w.classList.toggle("highlight", w.dataset.word === word));
         
@@ -293,7 +306,7 @@
             delete translations[selectedWord];
         }
         localStorage.setItem("lc_trans", JSON.stringify(translations));
-        refreshBlocks(); // Обновляем блоки для синхронизации тултипов
+        refreshBlocks(); 
         if (window.innerWidth <= 768) closeSidebar();
     }
 
